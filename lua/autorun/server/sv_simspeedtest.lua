@@ -1,24 +1,22 @@
 
 local MSLag = 7
-local MovingEntities = 600
-local Constraints = 1700
+local MovingEntities = 500
+local Constraints = 6000
 local CanSpawn
 
 -- Values might vary between each computer's performance. Adjust it according to your tests and specs.
 CreateConVar("gsimspeed_enable", 1, FCVAR_ARCHIVE, "enable/disable the SimSpeed")
 CreateConVar("gsimspeed_system_max_entities", 600, FCVAR_ARCHIVE, "Max number of entities to consider a good performance.")
-CreateConVar("gsimspeed_system_max_constraints", 1000, FCVAR_ARCHIVE, "Max number of constraints to consider a good performance.")
+CreateConVar("gsimspeed_system_max_consfactor", 1000, FCVAR_ARCHIVE, "A number that defines the limit for constraints.")
 CreateConVar("gsimspeed_system_max_coldelay", 7, FCVAR_ARCHIVE, "Max delay, between collisions to consider a good performance")
 
 CreateConVar("gsimspeed_props_cancreate_minsim", 0.1, FCVAR_ARCHIVE, "Sets the minimal sim speed prop spawning is allowed.")
 
 GSimSpeed = GSimSpeed or {}
 GSimSpeed.Entities = GSimSpeed.Entities or {}
-GSimSpeed.Constraints = GSimSpeed.Constraints or {}
 
 GSimSpeed.WhiteList = {
 	prop_physics = true,
-	phys_constraint = true,
 }
 
 local function AddEntity(ent)
@@ -26,12 +24,8 @@ local function AddEntity(ent)
 		if not IsValid(ent) then return end
 		if not GSimSpeed.WhiteList[ent:GetClass()] then return end
 		local physobj = ent:GetPhysicsObject()
-		if IsValid(physobj) and not ent:IsConstraint() then
-			GSimSpeed.Entities[ent] = true print("ENTITY!")
-		elseif ent:IsConstraint() then
-			GSimSpeed.Constraints[ent] = true print("CONSTRAINT!")
-		else
-			print(ent:GetClass())
+		if IsValid(physobj) then
+			GSimSpeed.Entities[ent] = true
 		end
 	end)
 end
@@ -41,12 +35,14 @@ hook.Add("OnEntityCreated", "SimSpeed.AddEntity", AddEntity)
 
 local function RemoveEntity(ent)
 	GSimSpeed.Entities[ent] = nil
-	GSimSpeed.Constraints[ent] = nil
 end
 hook.Remove("EntityRemoved", "SimSpeed.RemoveEntity")
 hook.Add("EntityRemoved", "SimSpeed.RemoveEntity", RemoveEntity)
 
 local function resetTimeScale()
+	if not IsSimSpeedActive then return end
+	print("values have been reseted!")
+	IsSimSpeedActive = nil
 	CanSpawn = true
 	game.SetTimeScale( 1 )
 end
@@ -54,24 +50,32 @@ end
 local function SimSpeedThink()
 	if GetConVar("GSimSpeed_enable"):GetInt() < 1 then resetTimeScale() return end
 
+	if not IsSimSpeedActive then
+		IsSimSpeedActive = true
+	end
+
 	-- Lag by collisions
 	local factor = physenv.GetLastSimulationTime() * 1000
 	local physratio = math.min(MSLag / factor, 1)
 
 	-- Lag by moving entities
 	local ActiveEnts = 0
+	local ExtraPoints = 0
 	for ent, _ in pairs(GSimSpeed.Entities) do
 		if not IsValid(ent) then continue end
 		local physobj = ent:GetPhysicsObject()
-		if IsValid(physobj) and physobj:IsAsleep() then continue end
+		if IsValid(physobj) and not physobj:IsAsleep() then 
+			ActiveEnts = ActiveEnts + 1
 
-		ActiveEnts = ActiveEnts + 1
+			if constraint.HasConstraints(ent) then
+				ExtraPoints = ExtraPoints + table.Count(ent.Constraints) --#constraint.GetTable(ent)
+			end
+		end
 	end
 	local movratio = math.min(MovingEntities / ActiveEnts, 1)
 
 	-- Lag by constraints
-	local conscount = table.Count(GSimSpeed.Constraints)
-	local consratio = math.min(Constraints / conscount, 1)
+	local consratio = math.min(Constraints / ExtraPoints, 1)
 
 	local finalratio = math.min(physratio, movratio, consratio)
 
@@ -80,7 +84,7 @@ local function SimSpeedThink()
 		CanSpawn = false
 	end
 
-	print("Sim Speed Ratio:", finalratio, "Moving Entities:", ActiveEnts, "Constraints:", conscount)
+	--print("Sim Speed Ratio:", finalratio, "Moved Entities:", ActiveEnts, "Moved Constraints:", ExtraPoints)
 
 	game.SetTimeScale( finalratio )
 end
