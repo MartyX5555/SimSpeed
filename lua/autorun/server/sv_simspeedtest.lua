@@ -100,7 +100,7 @@ local function SimSpeedThink()
 	local finalratio = math.min(physratio, movratio, consratio)
 	game.SetTimeScale( getConvarValue("system_defaultsim") *  finalratio )
 
-	print("Sim Speed Ratio:", game.GetTimeScale(), "Moved Entities:", ActiveEnts, "All Entities:", table.Count(GSimSpeed.Entities), "Moved Constraints:", ExtraPoints)
+	--print("Sim Speed Ratio:", game.GetTimeScale(), "Moved Entities:", ActiveEnts, "All Entities:", table.Count(GSimSpeed.Entities), "Moved Constraints:", ExtraPoints)
 
 	-- Restricts the creation of new ents if the sim speed is below to the specified.
 	GSimSpeed.CanSpawn = true
