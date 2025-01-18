@@ -20,9 +20,6 @@ GSimSpeed.Blacklist = {
 	prop_dynamic = true,
 	func_ = true,
 }
-
---PrintTable(GSimSpeed.Entities)
-
 local function HasBlacklistedPatterns(class)
 	for pattern, _ in pairs(GSimSpeed.Blacklist) do
 		if string.StartsWith(class, pattern) then
@@ -41,18 +38,16 @@ local function AddEntity(ent)
 		local physobj = ent:GetPhysicsObject()
 		if IsValid(physobj) then
 			GSimSpeed.Entities[ent] = true
+
+			-- Removes entities from the system if deleted.
+			ent:CallOnRemove("gsimspeed_OnRemove", function()
+				GSimSpeed.Entities[ent] = nil
+			end)
 		end
 	end)
 end
 hook.Remove("OnEntityCreated", "SimSpeed.AddEntity")
 hook.Add("OnEntityCreated", "SimSpeed.AddEntity", AddEntity)
-
--- Removes entities from the system
-local function RemoveEntity(ent)
-	GSimSpeed.Entities[ent] = nil
-end
-hook.Remove("EntityRemoved", "SimSpeed.RemoveEntity")
-hook.Add("EntityRemoved", "SimSpeed.RemoveEntity", RemoveEntity)
 
 local function getConvarValue(command)
 	return GetConVar("gsimspeed_" .. command):GetFloat()
@@ -114,9 +109,9 @@ hook.Add("Tick", "SimSpeed.Think", SimSpeedThink)
 
 local function CanCreateEntity(ply)
 	if not GSimSpeed.CanSpawn then
-		local Override = hook.Run( "SimSpeed_OnSpawnError", game.GetTimeScale() )
+		local Override = hook.Run( "SimSpeed_DisplaySpawnError", game.GetTimeScale() )
 		if not Override then
-			ply:ChatPrint("Too much lag to process this task!")
+			ply:ChatPrint("Sorry, but we are unable to allow this action at the moment. Wait until the simspeed increases!")
 		end
 		return false
 	end
