@@ -66,18 +66,16 @@ local function AddEntity(ent)
 		local physobj = ent:GetPhysicsObject()
 		if IsValid(physobj) then
 			GSimSpeed.Entities[ent] = true
+
+			-- Removes entities from the system if deleted.
+			ent:CallOnRemove("gsimspeed_OnRemove", function()
+				GSimSpeed.Entities[ent] = nil
+			end)
 		end
 	end)
 end
 hook.Remove("OnEntityCreated", "SimSpeed.AddEntity")
 hook.Add("OnEntityCreated", "SimSpeed.AddEntity", AddEntity)
-
--- Removes entities from the system
-local function RemoveEntity(ent)
-	GSimSpeed.Entities[ent] = nil
-end
-hook.Remove("EntityRemoved", "SimSpeed.RemoveEntity")
-hook.Add("EntityRemoved", "SimSpeed.RemoveEntity", RemoveEntity)
 
 local function getConvarValue(command)
 	return GetConVar("gsimspeed_" .. command):GetFloat()
