@@ -11,7 +11,6 @@ net.Receive("SimSpeed.Network", function()
 end)
 
 local function EnableSimSpeed(_, _, new)
-	print("Trigger from EnableSim")
 	local Bool = tobool(new)
 	GSimSpeed.IsEnabled = Bool
 	TransmmitStatus()
@@ -20,7 +19,14 @@ CreateConVar("gsimspeed_enable", 1, FCVAR_ARCHIVE, "enable/disable the SimSpeed"
 cvars.RemoveChangeCallback("gsimspeed_enable", "gsimspeed_enable_callback" )
 cvars.AddChangeCallback("gsimspeed_enable", EnableSimSpeed, "gsimspeed_enable_callback")
 
+hook.Remove("Initialize", "SimSpeed.Initialize.ConvarValueSync")
+hook.Add( "Initialize", "SimSpeed.Initialize.ConvarValueSync", function()
+	local value = GetConVar("gsimspeed_enable"):GetFloat()
+	GSimSpeed.IsEnabled = tobool(value)
+end )
+
 -- Values might vary between each computer's performance. Adjust it according to your tests and specs.
+-- If used in a dedicated server
 
 CreateConVar("gsimspeed_system_defaultsim", 1, FCVAR_ARCHIVE, "Sets the default sim speed.")
 CreateConVar("gsimspeed_system_max_entities", 500, FCVAR_ARCHIVE, "Max number of entities to consider a good performance.")
@@ -146,8 +152,6 @@ local function SimSpeedTick()
 	-- Gets the worst of the 3.
 	local finalratio = math.min(physratio, movratio, consratio, luaratio)
 	SetTimeScale( getConvarValue("system_defaultsim") *  finalratio )
-
-	--print("Sim Speed Ratio:", GetTimeScale(), "Moved Entities:", ActiveEnts, "All Entities:", table.Count(GSimSpeed.Entities), "Moved Constraints:", ExtraPoints)
 
 	-- Restricts the creation of new ents if the sim speed is below to the specified.
 	if GSimSpeed.CanSpawn and GetTimeScale() < getConvarValue("props_cancreate_minsim") then

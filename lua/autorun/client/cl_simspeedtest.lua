@@ -2,12 +2,10 @@ GSimSpeed = GSimSpeed or {}
 GSimSpeed.IsEnabled = true
 
 hook.Add("InitPostEntity", "SimSpeed.RequestBool", function()
-	print("Start requesting signal...")
 	net.Start("SimSpeed.Network")
 	net.SendToServer()
 end)
 net.Receive("SimSpeed.Network", function()
-	print("Final Signal received!!!!!")
 	GSimSpeed.IsEnabled = net.ReadBool()
 end)
 
