@@ -112,7 +112,7 @@ local function SimSpeedTick()
 	end
 
 	-- Lag by lua. May also work with collisions at some point.
-	-- Note: this could not work in singleplayer in a realiable way. Use it at your own risk
+	-- Note: this could not work in singleplayer in a reliable way. Use it at your own risk
 	local luafactor = engine.AbsoluteFrameTime() * 1000
 	local luaratio = math.pow(math.min( getConvarValue("system_max_luadelay") / luafactor, 2), 1)
 
