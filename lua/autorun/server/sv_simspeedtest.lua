@@ -32,6 +32,7 @@ CreateConVar("gsimspeed_system_defaultsim", 1, FCVAR_ARCHIVE, "Sets the default 
 CreateConVar("gsimspeed_system_max_entities", 500, FCVAR_ARCHIVE, "Max number of entities to consider a good performance.")
 CreateConVar("gsimspeed_system_max_consscore", 6000, FCVAR_ARCHIVE, "Max Score obtained by props with constraints to consider a good performance.")
 CreateConVar("gsimspeed_system_max_coldelay", 7, FCVAR_ARCHIVE, "Max delay, between collisions to consider a good performance")
+CreateConVar("gsimspeed_system_max_luadelay", 30, FCVAR_ARCHIVE, "Max delay, for lua to consider a good performance") -- 15 can work, but for servers
 
 CreateConVar("gsimspeed_props_cancreate_minsim", 0.05, FCVAR_ARCHIVE, "Sets the minimal sim speed prop spawning is allowed.")
 
@@ -51,8 +52,6 @@ GSimSpeed.Blacklist = {
 
 local SetTimeScale = game.SetTimeScale
 local GetTimeScale = game.GetTimeScale
-
---PrintTable(GSimSpeed.Entities)
 
 local function HasBlacklistedPatterns(class)
 	for pattern, _ in pairs(GSimSpeed.Blacklist) do
@@ -103,27 +102,21 @@ local function FreezeProps(PhysObjs)
 	hook.Run( "SimSpeed_OnFreeze", PhysObjs )
 end
 
---local LastFrame = SysTime()
-
+local previousratio = 1
+local oldestratio = 1
 local function SimSpeedTick()
 	if not GSimSpeed.IsEnabled then resetTimeScale() return end
 
 	if not IsSimSpeedActive then
 		IsSimSpeedActive = true
 	end
-	local luaratio = 1
-	--[[ -- May work with lagging E2s and other lua based systems, however, also takes menu pauses and massive prop undo into account.
-	-- lag by lua (experimental!)
-	local test1 = (SysTime() - LastFrame) * 1000
-	luaratio = math.min(2 / test1, 1)
-	--print("lua lag test ratio:", luaratio, test1)
 
-	-- We need to wait until the next frame to catch the whole delay.
-	timer.Simple(0, function()
-		LastFrame = SysTime()
-	end)
-	]]
-	-- Lag by collisions
+	-- Lag by lua. May also work with collisions at some point.
+	-- Note: this could not work in singleplayer in a realiable way. Use it at your own risk
+	local luafactor = engine.AbsoluteFrameTime() * 1000
+	local luaratio = math.pow(math.min( getConvarValue("system_max_luadelay") / luafactor, 2), 1)
+
+	-- Lag by collisions.
 	local factor = physenv.GetLastSimulationTime() * 1000
 	local physratio = math.min(getConvarValue("system_max_coldelay") / factor, 1)
 
@@ -149,8 +142,9 @@ local function SimSpeedTick()
 	-- Lag by constraints
 	local consratio = math.min(getConvarValue("system_max_consscore") / ExtraPoints, 1)
 
-	-- Gets the worst of the 3.
-	local finalratio = math.min(physratio, movratio, consratio, luaratio)
+	-- Gets the worst of the 4. Apply an average based on the last ratio value.
+	local currentratio = math.min(physratio, movratio, consratio, luaratio)
+	local finalratio = (currentratio + previousratio + oldestratio) / 3
 	SetTimeScale( getConvarValue("system_defaultsim") *  finalratio )
 
 	-- Restricts the creation of new ents if the sim speed is below to the specified.
@@ -167,12 +161,15 @@ local function SimSpeedTick()
 		end
 	end
 
+	oldestratio = previousratio
+	previousratio = currentratio
 end
 
 hook.Remove("Tick", "SimSpeed.Tick")
 hook.Add("Tick", "SimSpeed.Tick", SimSpeedTick)
 
 local function CanCreateEntity(ply)
+
 	if not GSimSpeed.CanSpawn then
 		local Override = hook.Run( "SimSpeed.OnSpawnError", game.GetTimeScale() )
 		if not Override then
