@@ -87,8 +87,8 @@ local function getConvarValue(command)
 end
 
 local function resetTimeScale()
-	if not IsSimSpeedActive then return end
-	IsSimSpeedActive = nil
+	if not GSimSpeed.IsSimSpeedActive then return end
+	GSimSpeed.IsSimSpeedActive = nil
 	GSimSpeed.CanSpawn = true
 	SetTimeScale( 1 )
 end
@@ -107,8 +107,8 @@ local oldestratio = 1
 local function SimSpeedTick()
 	if not GSimSpeed.IsEnabled then resetTimeScale() return end
 
-	if not IsSimSpeedActive then
-		IsSimSpeedActive = true
+	if not GSimSpeed.IsSimSpeedActive then
+		GSimSpeed.IsSimSpeedActive = true
 	end
 
 	-- Lag by lua. May also work with collisions at some point.
