@@ -1,6 +1,8 @@
 GSimSpeed = GSimSpeed or {}
 GSimSpeed.IsEnabled = true
 
+CreateClientConVar("gsimspeed_hud", 0, true, false, "Toggle the Sim Speed HUD display.")
+
 hook.Add("InitPostEntity", "SimSpeed.RequestBool", function()
 	net.Start("SimSpeed.Network")
 	net.SendToServer()
@@ -12,6 +14,7 @@ end)
 hook.Remove( "HUDPaint", "SimSpeed.HudRender")
 hook.Add( "HUDPaint", "SimSpeed.HudRender", function()
 	if not GSimSpeed.IsEnabled then return end
+	if GetConVar("gsimspeed_hud"):GetInt() ~= 1 then return end
 
 	local SimScale = game.GetTimeScale()
 	local SimRatio = string.format( "%.2f", math.Round(SimScale, 2) )

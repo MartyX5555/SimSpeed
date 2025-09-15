@@ -147,6 +147,7 @@ end
 
 local previousratio = 1
 local oldestratio = 1
+
 local function SimSpeedTick()
 	if not GSimSpeed.IsEnabled then resetTimeScale() return end
 
@@ -159,7 +160,7 @@ local function SimSpeedTick()
 	local luaratio = 1
 	if CanMonitor("lua") then
 		local luafactor = engine.AbsoluteFrameTime() * 1000
-		luaratio = math.pow(math.min( getConvarValue("max_luadelay") / luafactor, 2), 1)
+		luaratio = math.min( getConvarValue("max_luadelay") / luafactor, 1)
 	end
 
 	-- Lag by collisions.
@@ -196,7 +197,13 @@ local function SimSpeedTick()
 
 	-- Gets the worst of the 4. Apply an average based on the last ratio value.
 	local currentratio = math.min(physratio, movratio, consratio, luaratio)
-	local finalratio = (currentratio + previousratio + oldestratio) / 3
+
+	-- if the previous ratio was bad, but the current is good, apply ratio without averaging.
+	local finalratio = currentratio
+	if currentratio < previousratio and previousratio < oldestratio then
+		finalratio = (currentratio + previousratio + oldestratio) / 3
+	end
+
 	SetTimeScale( getConvarValue("defaultsim") *  finalratio )
 
 	oldestratio = previousratio
