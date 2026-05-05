@@ -111,7 +111,7 @@ function GSimSpeed.FreezeAllProps()
 	local Entities = GSimSpeed.Entities
 	local Objects = {}
 	for ent, _ in pairs(Entities) do
-		if not IsValid(ent) then continue end
+		if not IsValid(ent) then GSimSpeed.Entities[ent] = nil continue end
 
 		local object = ent:GetPhysicsObject()
 		if not IsValid(object) then continue end
@@ -179,6 +179,7 @@ local function SimSpeedTick()
 		local ActivePhysObjects = {}
 		local ExtraPoints = 0
 		for ent, _ in pairs(GSimSpeed.Entities) do
+			if not IsValid(ent) then GSimSpeed.Entities[ent] = nil continue end
 			local physobj = ent:GetPhysicsObject()
 			if IsValid(physobj) and not physobj:IsAsleep() then
 				ActiveEnts = ActiveEnts + 1
